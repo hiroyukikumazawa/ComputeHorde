@@ -10,11 +10,10 @@ from compute_horde_validator.validator.tasks import (
     trigger_run_admin_job_request,
 )
 
-from .helpers import MockMinerClient, mock_get_miner_axon_info, mock_keypair, throw_error
+from .helpers import MockMinerClient, mock_get_miner_axon_info, throw_error
 
 
 @patch("compute_horde_validator.validator.tasks.get_miner_axon_info", mock_get_miner_axon_info)
-@patch("compute_horde_validator.validator.tasks.get_keypair", mock_keypair)
 @patch("compute_horde_validator.validator.tasks.MinerClient", MockMinerClient)
 @pytest.mark.django_db(databases=["default", "default_alias"], transaction=True)
 def test_trigger_run_admin_job__should_trigger_job():
@@ -41,7 +40,6 @@ def test_trigger_run_admin_job__should_trigger_job():
 
 
 @patch("compute_horde_validator.validator.tasks.get_miner_axon_info", throw_error)
-@patch("compute_horde_validator.validator.tasks.get_keypair", mock_keypair)
 @patch("compute_horde_validator.validator.tasks.MinerClient", MockMinerClient)
 @pytest.mark.django_db(databases=["default", "default_alias"], transaction=True)
 def test_trigger_run_admin_job__should_not_trigger_job():
@@ -96,7 +94,6 @@ def get_response(status):
     "compute_horde_validator.validator.tasks.requests.post",
     lambda url, json, headers: get_response(201),
 )
-@patch("compute_horde_validator.validator.tasks.get_keypair", mock_keypair)
 @pytest.mark.django_db(databases=["default", "default_alias"])
 def test_send_events_to_facilitator__success():
     add_system_events()
@@ -108,7 +105,6 @@ def test_send_events_to_facilitator__success():
     "compute_horde_validator.validator.tasks.requests.post",
     lambda url, json, headers: get_response(400),
 )
-@patch("compute_horde_validator.validator.tasks.get_keypair", mock_keypair)
 @pytest.mark.django_db(databases=["default", "default_alias"])
 def test_send_events_to_facilitator__failure():
     add_system_events()
