@@ -1,5 +1,6 @@
 import asyncio
 import datetime
+import sys
 from collections.abc import Iterable
 
 from django.conf import settings
@@ -52,7 +53,12 @@ class Command(BaseCommand):
             batch_id=None,
             keypair=key,
         )
-        asyncio.run(_execute_jobs(client, jobs))
+
+        try:
+            asyncio.run(_execute_jobs(client, jobs))
+        except KeyboardInterrupt:
+            print("Interrupted by user")
+            sys.exit(1)
 
 
 async def _execute_jobs(client: MinerClient, synthetic_jobs: Iterable[SyntheticJob]):
