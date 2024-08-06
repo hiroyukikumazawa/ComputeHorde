@@ -1,4 +1,5 @@
 import asyncio
+import functools
 import logging
 import threading
 import time
@@ -54,6 +55,28 @@ MANIFEST_INCENTIVE_APPLIED_SCORE = MOCK_SCORE * MANIFEST_INCENTIVE_MULTIPLIER
 NOT_SCORED = 0.0
 
 logger = logging.getLogger(__name__)
+
+
+def async_override_config(**config_overrides):
+    def decorator(test_func):
+        @functools.wraps(test_func)
+        async def wrapper(*args, **kwargs):
+            override_obj = override_config(**config_overrides)
+            @sync_to_async
+            def setup_override():
+                override_obj.__enter__()
+
+            @sync_to_async
+            def teardown_override():
+                override_obj.__exit__(None, None, None)
+
+            await setup_override()
+            try:
+                return await test_func(*args, **kwargs)
+            finally:
+                await teardown_override()
+        return wrapper
+    return decorator
 
 
 class MockSyntheticJobGenerator(BaseSyntheticJobGenerator):
@@ -409,10 +432,6 @@ time_took_mock_synthetic_job_generator_factory = MagicMock(
 )
 @pytest.mark.asyncio
 @pytest.mark.django_db(databases=["default", "default_alias"], transaction=True)
-@override_config(
-    DYNAMIC_MANIFEST_SCORE_MULTIPLIER=MANIFEST_INCENTIVE_MULTIPLIER,
-    DYNAMIC_MANIFEST_DANCE_RATIO_THRESHOLD=MANIFEST_DANCE_RATIO_THRESHOLD,
-)
 @pytest.mark.parametrize(
     "curr_online_executor_count,prev_online_executor_count,expected_multiplier",
     [
@@ -437,6 +456,10 @@ time_took_mock_synthetic_job_generator_factory = MagicMock(
             MANIFEST_INCENTIVE_MULTIPLIER,
         ),
     ],
+)
+@async_override_config(
+    DYNAMIC_MANIFEST_SCORE_MULTIPLIER=MANIFEST_INCENTIVE_MULTIPLIER,
+    DYNAMIC_MANIFEST_DANCE_RATIO_THRESHOLD=MANIFEST_DANCE_RATIO_THRESHOLD,
 )
 async def test_manifest_dance_incentives(
     curr_online_executor_count,
